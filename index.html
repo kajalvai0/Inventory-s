@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>সুমাইয়া এন্টারপ্রাইজ - ইনভেন্টরি ম্যানেজমেন্ট</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* এখানে আপনার CSS কোড থাকবে */
+        body { font-family: 'Hind Siliguri', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background-color: #2c3e50; color: #fff; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        nav ul { list-style: none; margin: 0; padding: 0; display: flex; }
+        nav ul li { margin-left: 25px; }
+        nav ul li a { color: #fff; text-decoration: none; font-size: 18px; }
+        main { padding: 20px 0; }
+        section { background-color: #fff; padding: 40px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select { width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; font-family: 'Hind Siliguri', sans-serif; }
+        button { background-color: #1abc9c; color: #fff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+        button:hover { background-color: #16a085; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .data-table th { background-color: #f2f2f2; }
+        .action-buttons button { margin: 0 5px; padding: 5px 10px; font-size: 14px; }
+
+        /* Invoice Specific Styles (for printing) */
+        @media print {
+            body * { visibility: hidden; }
+            #invoice-print-area, #invoice-print-area * { visibility: visible; }
+            #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; box-sizing: border-box; }
+            header, nav, footer, .control-buttons, .form-group, .data-table button { display: none !important; } /* Hide elements not needed for print */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <span class="logo">সুমাইয়া এন্টারপ্রাইজ</span>
+            <nav>
+                <ul>
+                    <li><a href="#" id="nav-dashboard">ড্যাশবোর্ড</a></li>
+                    <li><a href="#" id="nav-products">পণ্য</a></li>
+                    <li><a href="#" id="nav-customers">গ্রাহক</a></li>
+                    <li><a href="#" id="nav-orders">অর্ডার</a></li>
+                    <li><button id="syncDataBtn">ডেটা সিঙ্ক করুন</button></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="dashboard">
+            <h2>ড্যাশবোর্ড</h2>
+            <p>মোট পণ্য: <span id="totalProducts">0</span></p>
+            <p>মোট গ্রাহক: <span id="totalCustomers">0</span></p>
+            <p>মোট অর্ডার: <span id="totalOrders">0</span></p>
+            <p>আজকের বিক্রয়: <span id="todaySales">৳ 0.00</span></p>
+        </section>
+
+        <section id="products" style="display: none;">
+            <h2>পণ্য ব্যবস্থাপনা</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group"><label for="productName">পণ্যের নাম:</label><input type="text" id="productName" required></div>
+                <div class="form-group"><label for="productSKU">SKU:</label><input type="text" id="productSKU"></div>
+                <div class="form-group"><label for="productDesc">বিবরণ:</label><textarea id="productDesc"></textarea></div>
+                <div class="form-group"><label for="purchasePrice">ক্রয় মূল্য:</label><input type="number" id="purchasePrice" step="0.01" required></div>
+                <div class="form-group"><label for="sellingPrice">বিক্রয় মূল্য:</label><input type="number" id="sellingPrice" step="0.01" required></div>
+                <div class="form-group"><label for="stock">স্টক:</label><input type="number" id="stock" required></div>
+                <div class="form-group"><label for="unit">একক:</label><input type="text" id="unit" value="পিস"></div>
+                <button type="submit">যোগ/আপডেট করুন</button>
+                <button type="button" id="clearProductFormBtn">ফর্ম খালি করুন</button>
+            </form>
+            <h3>পণ্য তালিকা</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>আইডি</th><th>নাম</th><th>SKU</th><th>বিক্রয় মূল্য</th><th>স্টক</th><th>অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody id="productListTableBody">
+                    </tbody>
+            </table>
+        </section>
+
+        <section id="customers" style="display: none;">
+            <h2>গ্রাহক ব্যবস্থাপনা</h2>
+            <form id="customerForm">
+                <input type="hidden" id="customerId">
+                <div class="form-group"><label for="customerName">গ্রাহকের নাম:</label><input type="text" id="customerName" required></div>
+                <div class="form-group"><label for="customerPhone">ফোন:</label><input type="text" id="customerPhone" required></div>
+                <div class="form-group"><label for="customerEmail">ইমেইল:</label><input type="email" id="customerEmail"></div>
+                <div class="form-group"><label for="customerAddress">ঠিকানা:</label><textarea id="customerAddress"></textarea></div>
+                <button type="submit">যোগ/আপডেট করুন</button>
+                <button type="button" id="clearCustomerFormBtn">ফর্ম খালি করুন</button>
+            </form>
+            <h3>গ্রাহক তালিকা</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>আইডি</th><th>নাম</th><th>ফোন</th><th>ঠিকানা</th><th>অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody id="customerListTableBody">
+                    </tbody>
+            </table>
+        </section>
+
+        <section id="orders" style="display: none;">
+            <h2>অর্ডার ব্যবস্থাপনা</h2>
+            <button id="createNewOrderBtn">নতুন অর্ডার তৈরি করুন</button>
+            <h3>অর্ডার তালিকা</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>অর্ডার আইডি</th><th>গ্রাহকের নাম</th><th>তারিখ</th><th>মোট মূল্য</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody id="orderListTableBody">
+                    </tbody>
+            </table>
+
+            <div id="orderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+                <div style="background-color: #fff; padding: 30px; border-radius: 8px; width: 80%; max-height: 90vh; overflow-y: auto;">
+                    <h3>নতুন অর্ডার / অর্ডার সম্পাদনা</h3>
+                    <form id="orderForm">
+                        <input type="hidden" id="orderId">
+                        <div class="form-group">
+                            <label for="orderCustomer">গ্রাহক নির্বাচন করুন:</label>
+                            <select id="orderCustomer" required>
+                                </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="orderDate">তারিখ:</label>
+                            <input type="date" id="orderDate" value="" required>
+                        </div>
+
+                        <h4>পণ্য নির্বাচন করুন</h4>
+                        <table class="data-table" id="orderItemsTable">
+                            <thead>
+                                <tr>
+                                    <th>পণ্য</th><th>পরিমাণ</th><th>একক মূল্য</th><th>মোট</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" style="text-align: right;">মোট মূল্য:</td>
+                                    <td id="orderTotalAmount">৳ 0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <button type="button" id="addProductToOrderBtn">পণ্য যোগ করুন</button>
+                        <hr style="margin: 20px 0;">
+                        <button type="submit">অর্ডার সংরক্ষণ করুন</button>
+                        <button type="button" id="closeOrderModalBtn">বাতিল করুন</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <div id="invoice-print-area" style="display: none; padding: 20px; border: 1px solid #ddd; background-color: #fff; margin-top: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://via.placeholder.com/100x50?text=Logo" alt="সুমাইয়া এন্টারপ্রাইজ লোগো" style="max-width: 150px; margin-bottom: 10px;">
+                <h2>সুমাইয়া এন্টারপ্রাইজ</h2>
+                <p>প্রোপাইটার: মোসাম্মৎ সুমাইয়া আক্তার</p>
+                <p>মোবাইল: +8801737439453 | ঠিকানা: বদলগাছি, নওগাঁ</p>
+            </div>
+            <hr>
+            <h3 style="text-align: center;">ইনভয়েস</h3>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <div>
+                    <p><strong>ইনভয়েস নং:</strong> <span id="invoiceId"></span></p>
+                    <p><strong>তারিখ:</strong> <span id="invoiceDate"></span></p>
+                </div>
+                <div style="text-align: right;">
+                    <p><strong>গ্রাহকের নাম:</strong> <span id="invoiceCustomerName"></span></p>
+                    <p><strong>ঠিকানা:</strong> <span id="invoiceCustomerAddress"></span></p>
+                    <p><strong>ফোন:</strong> <span id="invoiceCustomerPhone"></span></p>
+                </div>
+            </div>
+            <table class="data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>ক্রমিক নং</th>
+                        <th>পণ্যের নাম</th>
+                        <th>পরিমাণ</th>
+                        <th>একক মূল্য</th>
+                        <th>মোট</th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceItemsTableBody">
+                    </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" style="text-align: right; font-weight: bold;">মোট প্রদেয়:</td>
+                        <td style="font-weight: bold;"><span id="invoiceTotalAmount"></span></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div style="margin-top: 50px; text-align: right;">
+                <p>প্রোপাইটারের স্বাক্ষর</p>
+                <p>______________</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button onclick="window.print()">প্রিন্ট করুন</button>
+                <button onclick="document.getElementById('invoice-print-area').style.display='none';">বন্ধ করুন</button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 সুমাইয়া এন্টারপ্রাইজ। সর্বস্বত্ব সংরক্ষিত।</p>
+        </div>
+    </footer>
+
+    <script>
+        // এখানে আপনার জাভাস্ক্রিপ্ট কোড থাকবে
+        // এটি Google Apps Script URL এর প্লেসহোল্ডার। আপনাকে অবশ্যই আপনার ডেপ্লয় করা Apps Script URL দিয়ে এটি প্রতিস্থাপন করতে হবে।
+        const GOOGLE_SHEET_API_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE'; 
+        
+        // Local Storage Keys
+        const LS_PRODUCTS_KEY = 'sumaiya_products';
+        const LS_CUSTOMERS_KEY = 'sumaiya_customers';
+        const LS_ORDERS_KEY = 'sumaiya_orders';
+
+        // --- ডেটা লোডিং ও সেভিং ফাংশন (Local Storage) ---
+        function loadData(key) {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        let products = loadData(LS_PRODUCTS_KEY);
+        let customers = loadData(LS_CUSTOMERS_KEY);
+        let orders = loadData(LS_ORDERS_KEY);
+
+        // --- UI নেভিগেশন ---
+        const sections = ['dashboard', 'products', 'customers', 'orders'];
+        function showSection(id) {
+            sections.forEach(sectionId => {
+                document.getElementById(sectionId).style.display = 'none';
+            });
+            document.getElementById(id).style.display = 'block';
+        }
+
+        document.getElementById('nav-dashboard').addEventListener('click', (e) => { e.preventDefault(); showSection('dashboard'); updateDashboard(); });
+        document.getElementById('nav-products').addEventListener('click', (e) => { e.preventDefault(); showSection('products'); renderProducts(); });
+        document.getElementById('nav-customers').addEventListener('click', (e) => { e.preventDefault(); showSection('customers'); renderCustomers(); });
+        document.getElementById('nav-orders').addEventListener('click', (e) => { e.preventDefault(); showSection('orders'); renderOrders(); });
+
+        // --- ড্যাশবোর্ড আপডেট ---
+        function updateDashboard() {
+            document.getElementById('totalProducts').textContent = products.length;
+            document.getElementById('totalCustomers').textContent = customers.length;
+            document.getElementById('totalOrders').textContent = orders.length;
+
+            // Simple today's sales calculation (can be more complex)
+            const today = new Date().toISOString().slice(0, 10);
+            let salesToday = 0;
+            orders.filter(order => order.date === today && order.status === 'সম্পূর্ণ').forEach(order => {
+                salesToday += parseFloat(order.totalAmount || 0);
+            });
+            document.getElementById('todaySales').textContent = `৳ ${salesToday.toFixed(2)}`;
+        }
+
+        // --- পণ্য ব্যবস্থাপনা ---
+        function renderProducts() {
+            const tbody = document.getElementById('productListTableBody');
+            tbody.innerHTML = '';
+            products.forEach(product => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>${product.sku}</td>
+                    <td>৳ ${product.sellingPrice.toFixed(2)}</td>
+                    <td>${product.stock} ${product.unit}</td>
+                    <td class="action-buttons">
+                        <button onclick="editProduct('${product.id}')">সম্পাদনা</button>
+                        <button onclick="deleteProduct('${product.id}')">মুছুন</button>
+                    </td>
+                `;
+            });
+        }
+
+        document.getElementById('productForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const id = document.getElementById('productId').value || `P-${Date.now()}`;
+            const isNew = !products.find(p => p.id === id);
+
+            const product = {
+                id: id,
+                name: document.getElementById('productName').value,
+                sku: document.getElementById('productSKU').value,
+                description: document.getElementById('productDesc').value,
+                purchasePrice: parseFloat(document.getElementById('purchasePrice').value),
+                sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
+                stock: parseInt(document.getElementById('stock').value),
+                unit: document.getElementById('unit').value
+            };
+
+            if (isNew) {
+                products.push(product);
+            } else {
+                const index = products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    products[index] = product;
+                }
+            }
+            saveData(LS_PRODUCTS_KEY, products);
+            renderProducts();
+            this.reset();
+            document.getElementById('productId').value = ''; // Clear hidden ID
+            updateDashboard();
+        });
+
+        document.getElementById('clearProductFormBtn').addEventListener('click', function() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+        });
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productSKU').value = product.sku;
+                document.getElementById('productDesc').value = product.description;
+                document.getElementById('purchasePrice').value = product.purchasePrice;
+                document.getElementById('sellingPrice').value = product.sellingPrice;
+                document.getElementById('stock').value = product.stock;
+                document.getElementById('unit').value = product.unit;
+            }
+        }
+
+        function deleteProduct(id) {
+            if (confirm('আপনি কি এই পণ্যটি মুছে ফেলতে নিশ্চিত?')) {
+                products = products.filter(p => p.id !== id);
+                saveData(LS_PRODUCTS_KEY, products);
+                renderProducts();
+                updateDashboard();
+            }
+        }
+
+        // --- গ্রাহক ব্যবস্থাপনা ---
+        function renderCustomers() {
+            const tbody = document.getElementById('customerListTableBody');
+            tbody.innerHTML = '';
+            customers.forEach(customer => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.address}</td>
+                    <td class="action-buttons">
+                        <button onclick="editCustomer('${customer.id}')">সম্পাদনা</button>
+                        <button onclick="deleteCustomer('${customer.id}')">মুছুন</button>
+                    </td>
+                `;
+            });
+        }
+
+        document.getElementById('customerForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const id = document.getElementById('customerId').value || `C-${Date.now()}`;
+            const isNew = !customers.find(c => c.id === id);
+
+            const customer = {
+                id: id,
+                name: document.getElementById('customerName').value,
+                phone: document.getElementById('customerPhone').value,
+                email: document.getElementById('customerEmail').value,
+                address: document.getElementById('customerAddress').value
+            };
+
+            if (isNew) {
+                customers.push(customer);
+            } else {
+                const index = customers.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    customers[index] = customer;
+                }
+            }
+            saveData(LS_CUSTOMERS_KEY, customers);
+    
